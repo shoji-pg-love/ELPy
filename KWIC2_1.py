@@ -152,16 +152,22 @@ def highlight_results_for_pos(doc, found_positions, word_indices, pos_sequence, 
 
         print(reconstruct_text(highlighted_tokens))
 
-# POSタグによるソート表示
+# POSタグによるソート表示（改良版: next token をワードのみで精査）
 def highlight_results_for_pos_sorted(doc, found_positions, word_indices, pos_sequence, highlight_color, window_size):
     next_word_map = defaultdict(list)
 
     for pos in found_positions:
         next_pos_index = pos + len(pos_sequence)
+        # word_indices 上で次のトークンが存在するかチェック
         if next_pos_index < len(word_indices):
-            next_token = doc[word_indices[next_pos_index]].text.lower()
-            next_word_map[next_token].append(pos)
+            abs_idx = word_indices[next_pos_index]
+            token_obj = doc[abs_idx]
+            # 単語（英数字）トークンのみを対象
+            if re.match(r"\w+", token_obj.text):
+                next_token = token_obj.text.lower()
+                next_word_map[next_token].append(pos)
 
+    # 出現頻度順にソート
     sorted_next = sorted(next_word_map.items(), key=lambda x: len(x[1]), reverse=True)
 
     for next_token, positions in sorted_next:
@@ -181,6 +187,7 @@ def highlight_results_for_pos_sorted(doc, found_positions, word_indices, pos_seq
                     highlighted_tokens.append(f"{highlight_color}{token_text}{RESET}")
                 else:
                     highlighted_tokens.append(token_text)
+            # 文脈を再構築して表示
             print(reconstruct_text(highlighted_tokens))
 
 # エンティティ通常表示
@@ -210,38 +217,52 @@ def highlight_entity_results(tokens, entity_ranges, highlight_color, window_size
 
         print(reconstruct_text(highlighted_tokens))
 
-# エンティティソート表示
+# エンティティソート表示（改良版）
 def highlight_entity_results_sorted(tokens, entity_ranges, highlight_color, window_size):
+    # 単語トークンのインデックスだけを抽出
     word_indices = [i for i, token in enumerate(tokens) if re.match(r"\w+", token)]
     next_token_map = defaultdict(list)
 
+    # エンティティ後の "次の" 単語トークンを探す
     for start, end in entity_ranges:
-        if end < len(tokens) and re.match(r"\w+", tokens[end]):
-            next_token = tokens[end].lower()
-            next_token_map[next_token].append((start, end))
+        idx = end
+        # エンティティ直後に続く最初のワードトークンを探索
+        while idx < len(tokens) and not re.match(r"\w+", tokens[idx]):
+            idx += 1
+        if idx < len(tokens):
+            next_tok = tokens[idx].lower()
+            next_token_map[next_tok].append((start, end))
 
+    # 出現頻度順にソート
     sorted_items = sorted(next_token_map.items(), key=lambda x: len(x[1]), reverse=True)
 
-    for next_token, entity_list in sorted_items:
-        print(f"\n--- Next token: '{next_token}' ({len(entity_list)} times) ---")
-        for start, end in entity_list:
+    for next_token, ranges in sorted_items:
+        print(f"\n--- Next token: '{next_token}' ({len(ranges)} times) ---")
+        for start, end in ranges:
+            # エンティティ範囲をワードベースで再マッピング
             try:
                 start_word_pos = word_indices.index(start)
                 end_word_pos = word_indices.index(end - 1)
             except ValueError:
                 continue
 
+            # コンテキスト範囲をワードインデックスで設定
             context_start = max(0, start_word_pos - window_size)
             context_end = min(len(word_indices), end_word_pos + 1 + window_size)
-            token_start = word_indices[context_end - 1] + 1
+            context_indices = word_indices[context_start:context_end]
 
-            highlighted_tokens = []
-            for i in range(token_start, token_start + (context_end - context_start)):
+            # トークンレベルの開始・終了位置
+            token_start = context_indices[0]
+            token_end = context_indices[-1] + 1
+
+            # ハイライト表示
+            highlighted = []
+            for i in range(token_start, token_end):
                 if start <= i < end:
-                    highlighted_tokens.append(f"{highlight_color}{tokens[i]}{RESET}")
+                    highlighted.append(f"{highlight_color}{tokens[i]}{RESET}")
                 else:
-                    highlighted_tokens.append(tokens[i])
-            print(reconstruct_text(highlighted_tokens))
+                    highlighted.append(tokens[i])
+            print(reconstruct_text(highlighted))
 
 # ファイル読み込み
 def read_file(filename):
