@@ -1,0 +1,316 @@
+# Almost written by ChatGPT
+import sys
+import re
+import spacy
+from collections import defaultdict
+
+RED = '\033[91m'
+RESET = '\033[0m'
+
+nlp = spacy.load("en_core_web_sm")  # 英語モデルを使用（適宜変更可）
+
+# カラーの選択肢
+COLORS = {
+    'b': '\033[94m',  # blue
+    'g': '\033[92m',  # green
+    'r': '\033[91m',  # red
+    'c': '\033[96m',  # cyan
+    'm': '\033[95m',  # magenta
+    'y': '\033[93m',  # yellow
+    'k': '\033[90m',  # black (dark grey)
+    'w': '\033[97m',  # white
+}
+
+# 1. トークン化（記号も含む）
+def tokenize_with_punctuation(text):
+    return re.findall(r"\w+|[^\w\s]", text)
+
+# 2. キーワード検索（トークン単位）
+def search_keyword(tokens, keyword_tokens):
+    word_indices = [i for i, t in enumerate(tokens) if re.match(r"\w+", t)]
+    word_tokens = [tokens[i] for i in word_indices]
+    lower_word_tokens = [t.lower() for t in word_tokens]
+
+    found_positions = []
+    i = 0
+    while i <= len(lower_word_tokens) - len(keyword_tokens):
+        if lower_word_tokens[i:i+len(keyword_tokens)] == keyword_tokens:
+            found_positions.append(i)
+            i += len(keyword_tokens)
+        else:
+            i += 1
+    return found_positions, word_indices
+
+# 3. POSタグによる検索
+def search_by_pos(doc, pos_sequence):
+    tokens = [token.text for token in doc]
+    word_indices = [i for i, token in enumerate(doc) if not token.is_punct]
+    pos_tags = [token.pos_ for token in doc if not token.is_punct]
+
+    found_positions = []
+    i = 0
+    while i <= len(pos_tags) - len(pos_sequence):
+        if pos_tags[i:i+len(pos_sequence)] == pos_sequence:
+            found_positions.append(i)
+            i += len(pos_sequence)
+        else:
+            i += 1
+    return found_positions, word_indices, tokens
+
+# 4. エンティティ検索（例：ORG, PERSON など）
+def search_by_entity(doc, entity_type):
+    found_positions = []
+    for ent in doc.ents:
+        if ent.label_ == entity_type:
+            found_positions.append((ent.start, ent.end))
+    return found_positions, [token.text for token in doc]
+
+# 5. トークンを再構築（空白や記号の扱いを調整）
+def reconstruct_text(tokens):
+    result = ''
+    for i, token in enumerate(tokens):
+        if i > 0 and (token not in '.,;!?)]' and tokens[i - 1] not in '(['):
+            result += ' '
+        result += token
+    return result.strip()
+
+# 6. ハイライト表示（通常表示）
+def highlight_results(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size):
+    for position in found_positions:
+        start_idx = max(0, position - window_size)
+        end_idx = min(len(word_indices), position + len(keyword_tokens) + window_size)
+        context_word_indices = word_indices[start_idx:end_idx]
+
+        token_start = context_word_indices[0]
+        token_end = context_word_indices[-1] + 1
+        context_tokens = tokens[token_start:token_end]
+
+        highlight_word_indices = word_indices[position:position + len(keyword_tokens)]
+        highlight_token_indices = set(highlight_word_indices)
+
+        highlighted_tokens = []
+        for j in range(token_start, token_end):
+            token = tokens[j]
+            if j in highlight_token_indices and token.lower() in keyword_tokens:
+                highlighted_tokens.append(f"{highlight_color}{token}{RESET}")
+            else:
+                highlighted_tokens.append(token)
+
+        print(reconstruct_text(highlighted_tokens))
+
+# ソート2表示：tokenモード用
+def highlight_results_sorted_by_next_token(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size):
+    next_word_map = defaultdict(list)
+
+    for pos in found_positions:
+        absolute_pos = word_indices[pos + len(keyword_tokens)] if (pos + len(keyword_tokens)) < len(word_indices) else None
+        if absolute_pos is not None:
+            next_token = tokens[absolute_pos].lower()
+            next_word_map[next_token].append(pos)
+
+    sorted_next_tokens = sorted(next_word_map.items(), key=lambda x: len(x[1]), reverse=True)
+
+    for next_token, positions in sorted_next_tokens:
+        print(f"\n--- Next token: '{next_token}' ({len(positions)} times) ---")
+        for pos in positions:
+            start_idx = max(0, pos - window_size)
+            end_idx = min(len(word_indices), pos + len(keyword_tokens) + window_size)
+            context_indices = word_indices[start_idx:end_idx]
+            token_start = context_indices[0]
+            token_end = context_indices[-1] + 1
+
+            highlight_indices = set(word_indices[pos:pos + len(keyword_tokens)])
+
+            highlighted_tokens = []
+            for i in range(token_start, token_end):
+                token = tokens[i]
+                if i in highlight_indices and token.lower() in keyword_tokens:
+                    highlighted_tokens.append(f"{highlight_color}{token}{RESET}")
+                else:
+                    highlighted_tokens.append(token)
+
+            print(reconstruct_text(highlighted_tokens))
+
+# POSタグによる通常ハイライト表示
+def highlight_results_for_pos(doc, found_positions, word_indices, pos_sequence, highlight_color, window_size):
+    for position in found_positions:
+        start_idx = max(0, position - window_size)
+        end_idx = min(len(word_indices), position + len(pos_sequence) + window_size)
+        context_word_indices = word_indices[start_idx:end_idx]
+
+        token_start = context_word_indices[0]
+        token_end = context_word_indices[-1] + 1
+        highlight_indices = set(word_indices[position:position + len(pos_sequence)])
+
+        highlighted_tokens = []
+        for i in range(token_start, token_end):
+            token_text = doc[i].text.replace('\n', '')
+            if i in highlight_indices:
+                highlighted_tokens.append(f"{highlight_color}{token_text}{RESET}")
+            else:
+                highlighted_tokens.append(token_text)
+
+        print(reconstruct_text(highlighted_tokens))
+
+# POSタグによるソート表示
+def highlight_results_for_pos_sorted(doc, found_positions, word_indices, pos_sequence, highlight_color, window_size):
+    next_word_map = defaultdict(list)
+
+    for pos in found_positions:
+        next_pos_index = pos + len(pos_sequence)
+        if next_pos_index < len(word_indices):
+            next_token = doc[word_indices[next_pos_index]].text.lower()
+            next_word_map[next_token].append(pos)
+
+    sorted_next = sorted(next_word_map.items(), key=lambda x: len(x[1]), reverse=True)
+
+    for next_token, positions in sorted_next:
+        print(f"\n--- Next token: '{next_token}' ({len(positions)} times) ---")
+        for pos in positions:
+            start_idx = max(0, pos - window_size)
+            end_idx = min(len(word_indices), pos + len(pos_sequence) + window_size)
+            context_indices = word_indices[start_idx:end_idx]
+            token_start = context_indices[0]
+            token_end = context_indices[-1] + 1
+            highlight_indices = set(word_indices[pos:pos + len(pos_sequence)])
+
+            highlighted_tokens = []
+            for i in range(token_start, token_end):
+                token_text = doc[i].text.replace('\n', '')
+                if i in highlight_indices:
+                    highlighted_tokens.append(f"{highlight_color}{token_text}{RESET}")
+                else:
+                    highlighted_tokens.append(token_text)
+            print(reconstruct_text(highlighted_tokens))
+
+# エンティティ通常表示
+def highlight_entity_results(tokens, entity_ranges, highlight_color, window_size):
+    word_indices = [i for i, token in enumerate(tokens) if re.match(r"\w+", token)]
+
+    for start, end in entity_ranges:
+        try:
+            start_word_pos = word_indices.index(start)
+            end_word_pos = word_indices.index(end - 1)
+        except ValueError:
+            continue
+
+        context_start_pos = max(0, start_word_pos - window_size)
+        context_end_pos = min(len(word_indices), end_word_pos + 1 + window_size)
+        token_start = word_indices[context_start_pos]
+        token_end = word_indices[context_end_pos - 1] + 1
+
+        context_tokens = tokens[token_start:token_end]
+
+        highlighted_tokens = []
+        for i in range(token_start, token_end):
+            if start <= i < end:
+                highlighted_tokens.append(f"{highlight_color}{tokens[i]}{RESET}")
+            else:
+                highlighted_tokens.append(tokens[i])
+
+        print(reconstruct_text(highlighted_tokens))
+
+# エンティティソート表示
+def highlight_entity_results_sorted(tokens, entity_ranges, highlight_color, window_size):
+    word_indices = [i for i, token in enumerate(tokens) if re.match(r"\w+", token)]
+    next_token_map = defaultdict(list)
+
+    for start, end in entity_ranges:
+        if end < len(tokens) and re.match(r"\w+", tokens[end]):
+            next_token = tokens[end].lower()
+            next_token_map[next_token].append((start, end))
+
+    sorted_items = sorted(next_token_map.items(), key=lambda x: len(x[1]), reverse=True)
+
+    for next_token, entity_list in sorted_items:
+        print(f"\n--- Next token: '{next_token}' ({len(entity_list)} times) ---")
+        for start, end in entity_list:
+            try:
+                start_word_pos = word_indices.index(start)
+                end_word_pos = word_indices.index(end - 1)
+            except ValueError:
+                continue
+
+            context_start = max(0, start_word_pos - window_size)
+            context_end = min(len(word_indices), end_word_pos + 1 + window_size)
+            token_start = word_indices[context_end - 1] + 1
+
+            highlighted_tokens = []
+            for i in range(token_start, token_start + (context_end - context_start)):
+                if start <= i < end:
+                    highlighted_tokens.append(f"{highlight_color}{tokens[i]}{RESET}")
+                else:
+                    highlighted_tokens.append(tokens[i])
+            print(reconstruct_text(highlighted_tokens))
+
+# ファイル読み込み
+def read_file(filename):
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return file.read()
+    except FileNotFoundError:
+        print(f"File not found: {filename}")
+        return None
+
+# メイン処理
+def main():
+    if len(sys.argv) < 4:
+        print("Usage: python KWIC1_2.py sample.txt [mode: token|pos|ent] \"keyword/POS tag/entity type\"")
+        return
+
+    filename = sys.argv[1]
+    mode = sys.argv[2]
+    query = sys.argv[3]
+
+    text = read_file(filename)
+    if text is None:
+        return
+
+    doc = nlp(text)
+
+    display_mode = input("Display mode? (1 = Normal, 2 = Sort by next word frequency): ") or "1"
+    color_choice = input(f"What color do you want? (Default is red: ‘r’): ") or 'r'
+    window_size = input(f"Window size (number of words displayed before and after, default is 5): ") or 5
+    window_size = int(window_size)
+
+    highlight_color = COLORS.get(color_choice, RED)
+
+    if mode == "token":
+        keyword_tokens = query.lower().split()
+        tokens = tokenize_with_punctuation(text)
+        found_positions, word_indices = search_keyword(tokens, keyword_tokens)
+        if found_positions:
+            if display_mode == "2":
+                highlight_results_sorted_by_next_token(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size)
+            else:
+                highlight_results(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size)
+        else:
+            print("No matches found.")
+
+    elif mode == "pos":
+        pos_tags = query.strip().upper().split()
+        found_positions, word_indices, _ = search_by_pos(doc, pos_tags)
+        if found_positions:
+            if display_mode == "2":
+                highlight_results_for_pos_sorted(doc, found_positions, word_indices, pos_tags, highlight_color, window_size)
+            else:
+                highlight_results_for_pos(doc, found_positions, word_indices, pos_tags, highlight_color, window_size)
+        else:
+            print("No matches found.")
+
+    elif mode == "ent":
+        entity_type = query.strip().upper()
+        found_ranges, tokens = search_by_entity(doc, entity_type)
+        if found_ranges:
+            if display_mode == "2":
+                highlight_entity_results_sorted(tokens, found_ranges, highlight_color, window_size)
+            else:
+                highlight_entity_results(tokens, found_ranges, highlight_color, window_size)
+        else:
+            print("No matches found.")
+
+    else:
+        print("Invalid mode. Choose from: token, pos, ent")
+
+if __name__ == "__main__":
+    main()
