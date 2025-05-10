@@ -153,7 +153,7 @@ def highlight_results_for_pos(doc, found_positions, word_indices, pos_sequence, 
         print(reconstruct_text(highlighted_tokens))
 
 # POSタグによるソート表示（改良版: next token をワードのみで精査）
-def highlight_results_for_pos_sorted(doc, found_positions, word_indices, pos_sequence, highlight_color, window_size):
+def highlight_results_for_pos_sorted_by_next_token(doc, found_positions, word_indices, pos_sequence, highlight_color, window_size):
     next_word_map = defaultdict(list)
 
     for pos in found_positions:
@@ -191,7 +191,7 @@ def highlight_results_for_pos_sorted(doc, found_positions, word_indices, pos_seq
             print(reconstruct_text(highlighted_tokens))
 
 # エンティティ通常表示
-def highlight_entity_results(tokens, entity_ranges, highlight_color, window_size):
+def highlight_results_for_ent(tokens, entity_ranges, highlight_color, window_size):
     word_indices = [i for i, token in enumerate(tokens) if re.match(r"\w+", token)]
 
     for start, end in entity_ranges:
@@ -218,7 +218,7 @@ def highlight_entity_results(tokens, entity_ranges, highlight_color, window_size
         print(reconstruct_text(highlighted_tokens))
 
 # エンティティソート表示（改良版）
-def highlight_entity_results_sorted(tokens, entity_ranges, highlight_color, window_size):
+def highlight_results_fot_ent_sorted_by_next_token(tokens, entity_ranges, highlight_color, window_size):
     # 単語トークンのインデックスだけを抽出
     word_indices = [i for i, token in enumerate(tokens) if re.match(r"\w+", token)]
     next_token_map = defaultdict(list)
@@ -289,8 +289,8 @@ def main():
 
     doc = nlp(text)
 
-    display_mode = input("Display mode? (1 = Normal, 2 = Sort by next word frequency): ") or "1"
-    color_choice = input(f"What color do you want? (Default is red: ‘r’): ") or 'r'
+    display_mode = input("Display mode (1 = sequentially, 2 = by most frequent token): ") or "1"
+    color_choice = input(f"Color (Default is red: ‘r’): ") or 'r'
     window_size = input(f"Window size (number of words displayed before and after, default is 5): ") or 5
     window_size = int(window_size)
 
@@ -313,7 +313,7 @@ def main():
         found_positions, word_indices, _ = search_by_pos(doc, pos_tags)
         if found_positions:
             if display_mode == "2":
-                highlight_results_for_pos_sorted(doc, found_positions, word_indices, pos_tags, highlight_color, window_size)
+                highlight_results_for_pos_sorted_by_next_token(doc, found_positions, word_indices, pos_tags, highlight_color, window_size)
             else:
                 highlight_results_for_pos(doc, found_positions, word_indices, pos_tags, highlight_color, window_size)
         else:
@@ -324,9 +324,9 @@ def main():
         found_ranges, tokens = search_by_entity(doc, entity_type)
         if found_ranges:
             if display_mode == "2":
-                highlight_entity_results_sorted(tokens, found_ranges, highlight_color, window_size)
+                highlight_results_fot_ent_sorted_by_next_token(tokens, found_ranges, highlight_color, window_size)
             else:
-                highlight_entity_results(tokens, found_ranges, highlight_color, window_size)
+                highlight_results_for_ent(tokens, found_ranges, highlight_color, window_size)
         else:
             print("No matches found.")
 
