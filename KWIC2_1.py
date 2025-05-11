@@ -21,11 +21,30 @@ COLORS = {
     'w': '\033[97m',  # white
 }
 
-# 1. トークン化（記号も含む）
+# tokenize
 def tokenize_with_punctuation(text):
     return re.findall(r"\w+|[^\w\s]", text)
 
-# 2. キーワード検索（トークン単位）
+# re tokenize
+def reconstruct_text(tokens):
+    result = ''
+    for i, token in enumerate(tokens):
+        if i > 0 and (token not in '.,;!?)]' and tokens[i - 1] not in '(['):
+            result += ' '
+        result += token
+    result = re.sub(r'\s+', ' ', result)
+    return result.strip()
+
+# read a file
+def read_file(filename):
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return file.read()
+    except FileNotFoundError:
+        print(f"File not found: {filename}")
+        return None
+
+# 1. tokens search
 def search_keyword(tokens, keyword_tokens):
     word_indices = [i for i, t in enumerate(tokens) if re.match(r"\w+", t)]
     word_tokens = [tokens[i] for i in word_indices]
@@ -41,7 +60,7 @@ def search_keyword(tokens, keyword_tokens):
             i += 1
     return found_positions, word_indices
 
-# 3. POSタグによる検索
+# 2. POS tags search
 def search_by_pos(doc, pos_sequence):
     tokens = [token.text for token in doc]
     word_indices = [i for i, token in enumerate(doc) if not token.is_punct]
@@ -57,7 +76,7 @@ def search_by_pos(doc, pos_sequence):
             i += 1
     return found_positions, word_indices, tokens
 
-# 4. エンティティ検索（例：ORG, PERSON など）
+# 3. entity search
 def search_by_entity(doc, entity_type):
     found_positions = []
     for ent in doc.ents:
@@ -65,16 +84,7 @@ def search_by_entity(doc, entity_type):
             found_positions.append((ent.start, ent.end))
     return found_positions, [token.text for token in doc]
 
-# 5. トークンを再構築（空白や記号の扱いを調整）
-def reconstruct_text(tokens):
-    result = ''
-    for i, token in enumerate(tokens):
-        if i > 0 and (token not in '.,;!?)]' and tokens[i - 1] not in '(['):
-            result += ' '
-        result += token
-    return result.strip()
-
-# 6. ハイライト表示（通常表示）
+# 1-1. tokens & sequentially
 def highlight_results(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size):
     for position in found_positions:
         start_idx = max(0, position - window_size)
@@ -98,7 +108,7 @@ def highlight_results(tokens, found_positions, word_indices, keyword_tokens, hig
 
         print(reconstruct_text(highlighted_tokens))
 
-# ソート2表示：tokenモード用
+# 1-2. tokens & by most frequent token
 def highlight_results_sorted_by_next_token(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size):
     next_word_map = defaultdict(list)
 
@@ -131,7 +141,46 @@ def highlight_results_sorted_by_next_token(tokens, found_positions, word_indices
 
             print(reconstruct_text(highlighted_tokens))
 
-# POSタグによる通常ハイライト表示
+# 1-3. tokens & by most frequent POS tags
+def highlight_results_sorted_by_next_pos(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size, doc):
+    next_pos_map = defaultdict(list)
+
+    for pos in found_positions:
+        # キーワード直後の絶対インデックス
+        base = pos + len(keyword_tokens)
+        if base < len(word_indices):
+            abs_idx = word_indices[base]
+            # SPACE, PUNCT, SYM タグをスキップして次の実語のPOSを取得
+            look_idx = abs_idx
+            while look_idx < len(doc) and doc[look_idx].pos_ in ("SPACE", "PUNCT", "SYM"):
+                look_idx += 1
+            if look_idx < len(doc):
+                next_pos = doc[look_idx].pos_
+                next_pos_map[next_pos].append(pos)
+
+    # 頻度順にソート
+    sorted_next = sorted(next_pos_map.items(), key=lambda x: len(x[1]), reverse=True)
+
+    for next_pos, positions in sorted_next:
+        print(f"\n--- Next POS: '{next_pos}' ({len(positions)} times) ---")
+        for p in positions:
+            start_idx = max(0, p - window_size)
+            end_idx = min(len(word_indices), p + len(keyword_tokens) + window_size)
+            context_indices = word_indices[start_idx:end_idx]
+            token_start = context_indices[0]
+            token_end = context_indices[-1] + 1
+
+            highlight_indices = set(word_indices[p:p + len(keyword_tokens)])
+            highlighted_tokens = []
+            for i in range(token_start, token_end):
+                token_text = tokens[i]
+                if i in highlight_indices and token_text.lower() in keyword_tokens:
+                    highlighted_tokens.append(f"{highlight_color}{token_text}{RESET}")
+                else:
+                    highlighted_tokens.append(token_text)
+            print(reconstruct_text(highlighted_tokens))
+
+# 2-1. POS tags & sequentially
 def highlight_results_for_pos(doc, found_positions, word_indices, pos_sequence, highlight_color, window_size):
     for position in found_positions:
         start_idx = max(0, position - window_size)
@@ -144,7 +193,7 @@ def highlight_results_for_pos(doc, found_positions, word_indices, pos_sequence, 
 
         highlighted_tokens = []
         for i in range(token_start, token_end):
-            token_text = doc[i].text.replace('\n', '')
+            token_text = doc[i].text.replace('\n', ' ')
             if i in highlight_indices:
                 highlighted_tokens.append(f"{highlight_color}{token_text}{RESET}")
             else:
@@ -152,7 +201,7 @@ def highlight_results_for_pos(doc, found_positions, word_indices, pos_sequence, 
 
         print(reconstruct_text(highlighted_tokens))
 
-# POSタグによるソート表示（改良版: next token をワードのみで精査）
+# 2-2. POS tags & by most frequent token
 def highlight_results_for_pos_sorted_by_next_token(doc, found_positions, word_indices, pos_sequence, highlight_color, window_size):
     next_word_map = defaultdict(list)
 
@@ -182,7 +231,7 @@ def highlight_results_for_pos_sorted_by_next_token(doc, found_positions, word_in
 
             highlighted_tokens = []
             for i in range(token_start, token_end):
-                token_text = doc[i].text.replace('\n', '')
+                token_text = doc[i].text.replace('\n', ' ')
                 if i in highlight_indices:
                     highlighted_tokens.append(f"{highlight_color}{token_text}{RESET}")
                 else:
@@ -190,7 +239,28 @@ def highlight_results_for_pos_sorted_by_next_token(doc, found_positions, word_in
             # 文脈を再構築して表示
             print(reconstruct_text(highlighted_tokens))
 
-# エンティティ通常表示
+# 2-3. POS tags & by most frequent POS tags
+def highlight_results_for_pos_sorted_by_next_pos(doc, found, word_idx, pos_seq, color, win):
+    next_map = defaultdict(list)
+    for pos in found:
+        base = pos + len(pos_seq)
+        if base < len(word_idx):
+            idx = word_idx[base]
+            while idx < len(doc) and doc[idx].pos_ in ("SPACE","PUNCT","SYM"): idx += 1
+            if idx < len(doc): next_map[doc[idx].pos_].append(pos)
+    for next_pos, poses in sorted(next_map.items(), key=lambda x: len(x[1]), reverse=True):
+        print(f"\n--- Next POS: '{next_pos}' ({len(poses)} times) ---")
+        for p in poses:
+            s = max(0,p-win); e = min(len(word_idx),p+len(pos_seq)+win)
+            idxs = word_idx[s:e]; start, end = idxs[0], idxs[-1]+1
+            highlight = set(word_idx[p:p+len(pos_seq)])
+            out = []
+            for i in range(start,end):
+                txt = doc[i].text.replace('\n',' ')
+                out.append(f"{color}{txt}{RESET}" if i in highlight else txt)
+            print(reconstruct_text(out))
+
+# 3-1. entity & sequentially
 def highlight_results_for_ent(tokens, entity_ranges, highlight_color, window_size):
     word_indices = [i for i, token in enumerate(tokens) if re.match(r"\w+", token)]
 
@@ -217,7 +287,7 @@ def highlight_results_for_ent(tokens, entity_ranges, highlight_color, window_siz
 
         print(reconstruct_text(highlighted_tokens))
 
-# エンティティソート表示（改良版）
+# 3-2. entity & by most frequent token
 def highlight_results_fot_ent_sorted_by_next_token(tokens, entity_ranges, highlight_color, window_size):
     # 単語トークンのインデックスだけを抽出
     word_indices = [i for i, token in enumerate(tokens) if re.match(r"\w+", token)]
@@ -264,19 +334,53 @@ def highlight_results_fot_ent_sorted_by_next_token(tokens, entity_ranges, highli
                     highlighted.append(tokens[i])
             print(reconstruct_text(highlighted))
 
-# ファイル読み込み
-def read_file(filename):
-    try:
-        with open(filename, "r", encoding="utf-8") as file:
-            return file.read()
-    except FileNotFoundError:
-        print(f"File not found: {filename}")
-        return None
+# 3-3. entity & by most frequent POS tags
+def highlight_results_for_ent_sorted_by_next_pos(tokens, ent_ranges, color, win, doc):
+    next_map = defaultdict(list)
+    word_idx = [i for i, t in enumerate(tokens) if re.match(r"\w+", t)]
+    for (start,end) in ent_ranges:
+        # 実スタート位置
+        idx = end
+        while idx < len(tokens) and not re.match(r"\w+", tokens[idx]):
+            idx += 1
+        # convert token idx to doc idx
+        if idx < len(tokens):
+            # find corresponding doc index
+            doc_idx = None
+            count = 0
+            for j,tok in enumerate(doc):
+                if tok.text == tokens[idx]:
+                    doc_idx = j; break
+            if doc_idx is not None:
+                while doc_idx < len(doc) and doc[doc_idx].pos_ in ("SPACE","PUNCT","SYM"):
+                    doc_idx += 1
+                if doc_idx < len(doc):
+                    next_map[doc[doc_idx].pos_].append((start,end))
+    for next_pos, ranges in sorted(next_map.items(), key=lambda x: len(x[1]), reverse=True):
+        print(f"\n--- Next POS: '{next_pos}' ({len(ranges)} times) ---")
+        for (start,end) in ranges:
+            # ワードインデックスからcontext
+            wpos = [i for i, t in enumerate(tokens) if re.match(r"\w+", t)]
+            try:
+                sp = wpos.index(start)
+                ep = wpos.index(end-1)
+            except ValueError:
+                continue
+            s = max(0,sp-win); e = min(len(wpos),ep+1+win)
+            idxs = wpos[s:e]; st, ed = idxs[0], idxs[-1]+1
+            out = []
+            for i in range(st,ed):
+                tok = tokens[i]
+                if start <= i < end:
+                    out.append(f"{color}{tok}{RESET}")
+                else:
+                    out.append(tok)
+            print(reconstruct_text(out))
 
-# メイン処理
+# main
 def main():
     if len(sys.argv) < 4:
-        print("Usage: python KWIC1_2.py sample.txt [mode: token|pos|ent] \"keyword/POS tag/entity type\"")
+        print("Usage: python KWIC2_1.py sample.txt [mode: token|pos|ent] \"keyword/POS tag/entity type\"")
         return
 
     filename = sys.argv[1]
@@ -289,8 +393,8 @@ def main():
 
     doc = nlp(text)
 
-    display_mode = input("Display mode (1 = sequentially, 2 = by most frequent token): ") or "1"
-    color_choice = input(f"Color (Default is red: ‘r’): ") or 'r'
+    display_mode = input("Display mode (1 = sequentially, 2 = by most frequent token, 3 = by most frequent POS tags): ") or "1"
+    color_choice = input(f"Color (default is red: ‘r’): ") or 'r'
     window_size = input(f"Window size (number of words displayed before and after, default is 5): ") or 5
     window_size = int(window_size)
 
@@ -300,9 +404,12 @@ def main():
         keyword_tokens = query.lower().split()
         tokens = tokenize_with_punctuation(text)
         found_positions, word_indices = search_keyword(tokens, keyword_tokens)
+        print(f"\nResults: {len(found_positions)}\n")
         if found_positions:
             if display_mode == "2":
                 highlight_results_sorted_by_next_token(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size)
+            elif display_mode == "3":
+                highlight_results_sorted_by_next_pos(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size, doc)
             else:
                 highlight_results(tokens, found_positions, word_indices, keyword_tokens, highlight_color, window_size)
         else:
@@ -311,9 +418,12 @@ def main():
     elif mode == "pos":
         pos_tags = query.strip().upper().split()
         found_positions, word_indices, _ = search_by_pos(doc, pos_tags)
+        print(f"\nResults: {len(found_positions)}\n")
         if found_positions:
             if display_mode == "2":
                 highlight_results_for_pos_sorted_by_next_token(doc, found_positions, word_indices, pos_tags, highlight_color, window_size)
+            elif display_mode == "3":
+                highlight_results_for_pos_sorted_by_next_pos(doc, found_positions, word_indices, pos_tags, highlight_color, window_size)
             else:
                 highlight_results_for_pos(doc, found_positions, word_indices, pos_tags, highlight_color, window_size)
         else:
@@ -322,9 +432,12 @@ def main():
     elif mode == "ent":
         entity_type = query.strip().upper()
         found_ranges, tokens = search_by_entity(doc, entity_type)
+        print(f"\nResults: {len(found_ranges)}\n")
         if found_ranges:
             if display_mode == "2":
                 highlight_results_fot_ent_sorted_by_next_token(tokens, found_ranges, highlight_color, window_size)
+            elif display_mode == "3":
+                highlight_results_for_ent_sorted_by_next_pos(tokens, found_ranges, highlight_color, window_size, doc)
             else:
                 highlight_results_for_ent(tokens, found_ranges, highlight_color, window_size)
         else:
