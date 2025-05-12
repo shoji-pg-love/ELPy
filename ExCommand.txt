@@ -1,0 +1,12 @@
+1_1
+python kwic.py <filename> <target>
+python KWIC1_1.py sample.txt "climate change"
+
+1_2
+python KWIC1_2.py <filename> <type> <target>
+python KWIC1_2.py sample.txt token "climate"
+python KWIC1_2.py sample.txt pos "ADJ NOUN"
+python KWIC1_2.py sample.txt ent "PERSON"
+
+2_1
+same as 1_2
