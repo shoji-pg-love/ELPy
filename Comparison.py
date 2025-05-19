@@ -69,6 +69,47 @@ def pairwise_best_match(
     return best_pair, best_score
 
 
+def print_ranking_side_by_side(
+    q_name: str,
+    q_rank: List[Tuple[Tuple[str, ...], int]],
+    k_name: str,
+    k_rank: List[Tuple[Tuple[str, ...], int]],
+    q_shared: Dict[int, List[Tuple[str, ...]]],
+    k_shared: Dict[int, List[Tuple[str, ...]]],
+    step: int,
+    width: int = 40
+) -> None:
+    print(f"\n--- Side-by-side: {q_name} (Q) vs {k_name} (K) ---")
+    print(f"{'Q Ranking':<{width}} {'K Ranking':<{width}}")
+    print(f"{'-'*width} {'-'*width}")
+
+    max_len = max(len(q_rank), len(k_rank))
+    for i in range(0, max_len, step):
+        q_block = q_rank[i:i+step]
+        k_block = k_rank[i:i+step]
+        for j in range(step):
+            q_line = ""
+            k_line = ""
+            if j < len(q_block):
+                ng_q, fq = q_block[j]
+                q_line = f"{i+j+1:>3}. {tup2str(ng_q):<30} {fq:<4}"
+            if j < len(k_block):
+                ng_k, fk = k_block[j]
+                k_line = f"{i+j+1:>3}. {tup2str(ng_k):<30} {fk:<4}"
+            print(f"{q_line:<{width}} {k_line:<{width}}")
+
+        # Shared info for this step
+        q_shared_ngrams = q_shared.get(i, [])
+        k_shared_ngrams = k_shared.get(i, [])
+
+        shared = sorted(set(q_shared_ngrams) & set(k_shared_ngrams))
+        print(f"\n[ {len(shared)} shared ]")
+        if shared:
+            print(f"     → Shared n-grams ({i+1}-{i+step}): ", end="")
+            print(", ".join(tup2str(ng) for ng in shared))
+        print("\n")
+
+
 # ──────────── CLI & main ──────────────────────────────────────────────────
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="n-gram overlap (interactive n choice)")
@@ -175,20 +216,38 @@ def main() -> None:
     (best_a, best_b), best_val = max(totals.items(), key=lambda kv: kv[1])
     print(f"\n>>> Best match: {Path(best_a).name} & {Path(best_b).name} (total {best_val})")
 
-    files_to_show = [best_a, best_b] if args.only_best else [str(q_path)] + [str(fp) for fp in known_files]
-    for fp in files_to_show:
-        shared_map = (
-            detail_maps.get(fp, {}) if fp != q_file else {
-                start: shared for start, _, shared in incremental_overlap_detail(
-                    ranked[q_file], ranked[best_b], args.step, args.limit
-                )
-            }
+    if args.only_best:
+        # サイドバイサイド出力用の shared_map を作成
+        q_shared_map = {
+            start: shared for start, _, shared in incremental_overlap_detail(
+                ranked[best_a], ranked[best_b], args.step, args.limit
+            )
+        }
+        k_shared_map = detail_maps[best_b]
+
+        print_ranking_side_by_side(
+            Path(best_a).name,
+            ranked[best_a],
+            Path(best_b).name,
+            ranked[best_b],
+            q_shared_map,
+            k_shared_map,
+            args.step
         )
-        print_ranking(Path(fp).name, ranked[fp], shared_map, args.step)
+    else:
+        files_to_show = [str(q_path)] + [str(fp) for fp in known_files]
+        for fp in files_to_show:
+            shared_map = (
+                detail_maps.get(fp, {}) if fp != q_file else {
+                    start: shared for start, _, shared in incremental_overlap_detail(
+                        ranked[q_file], ranked[best_b], args.step, args.limit
+                    )
+                }
+            )
+            print_ranking(Path(fp).name, ranked[fp], shared_map, args.step)
 
     det_best = incremental_overlap_detail(ranked[best_a], ranked[best_b], args.step, args.limit)
     print_overlap(Path(best_a).name, Path(best_b).name, det_best, args.step, args.limit)
-
 
 
 if __name__ == "__main__":
