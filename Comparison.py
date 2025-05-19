@@ -87,8 +87,11 @@ def read_file(path: Path) -> str:
 
 def print_ranking(name: str, ranking: List[Tuple[Tuple[str, ...], int]]) -> None:
     print(f"\n--- {name} : top {len(ranking)} ---")
-    for i, (ng, freq) in enumerate(ranking, 1):
-        print(f"{i:>3}. {tup2str(ng):<40} {freq}")
+    step = 20   # ブロックを何単語ごとに設定するか
+    for block_start in range(0, len(ranking), step):
+        for i, (ng, freq) in enumerate(ranking[block_start:block_start + step], block_start + 1):
+            print(f"{i:>3}. {tup2str(ng):<40} {freq}")
+        print()  # ブロックごとに改行を挿入
 
 
 def print_overlap(
