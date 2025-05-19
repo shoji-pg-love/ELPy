@@ -85,13 +85,24 @@ def read_file(path: Path) -> str:
         sys.exit(f"Error reading {path}: {e}")
 
 
-def print_ranking(name: str, ranking: List[Tuple[Tuple[str, ...], int]]) -> None:
+def print_ranking(
+    name: str,
+    ranking: List[Tuple[Tuple[str, ...], int]],
+    shared_map: Dict[int, List[Tuple[str, ...]]],
+    step: int
+) -> None:
     print(f"\n--- {name} : top {len(ranking)} ---")
-    step = 20   # ブロックを何単語ごとに設定するか
-    for block_start in range(0, len(ranking), step):
-        for i, (ng, freq) in enumerate(ranking[block_start:block_start + step], block_start + 1):
-            print(f"{i:>3}. {tup2str(ng):<40} {freq}")
-        print()  # ブロックごとに改行を挿入
+    for i in range(0, len(ranking), step):
+        block = ranking[i:i+step]
+        for j, (ng, freq) in enumerate(block, start=i+1):
+            print(f"{j:>3}. {tup2str(ng):<40} {freq}")
+
+        shared = shared_map.get(i, [])
+        print(f"\n[ {len(shared)} shared ]")
+        if shared:
+            print(f"     → Shared n-grams ({i+1}-{i+len(block)}): ", end="")
+            print(", ".join(tup2str(ng) for ng in shared))
+        print("\n")
 
 
 def print_overlap(
@@ -129,40 +140,50 @@ def main() -> None:
     if len(args.files) < 2:
         sys.exit("Need ≥2 files.")
 
-    n_set = ask_n_gram()  # ★対話で取得
+    n_set = ask_n_gram()
 
-    # ランキング
     ranked: Dict[str, List[Tuple[Tuple[str, ...], int]]] = {}
+    raw: Dict[str, str] = {fp: read_file(Path(fp)) for fp in args.files}
     for fp in args.files:
-        counter = build_counter(read_file(Path(fp)), n_set)  # ★変更
+        counter = build_counter(raw[fp], n_set)
         ranked[fp] = top_items(counter, args.limit)
-        print_ranking(fp, ranked[fp])
+
+    q_file = args.files[0]
 
     if len(args.files) == 2:
         a, b = args.files
         det = incremental_overlap_detail(ranked[a], ranked[b], args.step, args.limit)
+        shared_map = {start: shared for start, _, shared in det}
+        print_ranking(a, ranked[a], shared_map, args.step)
+        print_ranking(b, ranked[b], shared_map, args.step)
         print_overlap(a, b, det, args.step, args.limit)
         return
 
-    # 3 本以上
-    totals = {
-        (a, b): sum(
-            c
-            for _, c, _ in incremental_overlap_detail(
-                ranked[a], ranked[b], args.step, args.limit
-            )
-        )
-        for a, b in combinations(args.files, 2)
-    }
-    print("\n=== Pairwise total shared n-grams ===")
+    # 3つ以上のファイルがあるとき：Qテキストとのみ比較
+    totals = {}
+    detail_maps = {}
+    for b in args.files[1:]:
+        det = incremental_overlap_detail(ranked[q_file], ranked[b], args.step, args.limit)
+        total = sum(c for _, c, _ in det)
+        totals[(q_file, b)] = total
+        detail_maps[b] = {start: shared for start, _, shared in det}
+
+    print("\n=== Pairwise total shared n-grams with Q ===")
     for (a, b), t in totals.items():
         print(f"{a} & {b}: {t}")
     (best_a, best_b), best_val = max(totals.items(), key=lambda kv: kv[1])
     print(f"\n>>> Best match: {best_a} & {best_b} (total {best_val})")
 
-    det_best = incremental_overlap_detail(
-        ranked[best_a], ranked[best_b], args.step, args.limit
-    )
+    for fp in args.files:
+        shared_map = detail_maps.get(fp, {}) if fp != q_file else {
+            start: shared for start, _, shared in incremental_overlap_detail(
+                ranked[q_file], ranked[best_b], args.step, args.limit
+            )
+        }
+
+        print_ranking(fp, ranked[fp], shared_map, args.step)
+
+    det_best = incremental_overlap_detail(ranked[best_a], ranked[best_b], args.step, args.limit)
     print_overlap(best_a, best_b, det_best, args.step, args.limit)
 
 
