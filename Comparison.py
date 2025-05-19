@@ -74,7 +74,9 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="n-gram overlap (interactive n choice)")
     p.add_argument("-s", "--step", type=int, default=20, help="window step size")
     p.add_argument("-m", "--max", dest="limit", type=int, default=200, help="top limit")
-    p.add_argument("files", nargs="+", help="text files (≥2)")
+    p.add_argument("--only-best", action="store_true", help="Show only question and best match")
+    p.add_argument("folder", help="Folder containing the question and known text files")
+    p.add_argument("question", help="Filename of the question text (must be in folder)")
     return p.parse_args()
 
 
@@ -137,54 +139,56 @@ def ask_n_gram() -> List[int]:  # ★追加
 
 def main() -> None:
     args = parse_args()
-    if len(args.files) < 2:
-        sys.exit("Need ≥2 files.")
+    folder = Path(args.folder)
+    q_path = folder / args.question
+    if not q_path.exists():
+        sys.exit(f"Question file {q_path} not found.")
+
+    all_files = list(folder.glob("*.txt"))
+    known_files = [fp for fp in all_files if fp != q_path]
+
+    if len(known_files) < 1:
+        sys.exit("Need at least one known file besides the question.")
 
     n_set = ask_n_gram()
 
     ranked: Dict[str, List[Tuple[Tuple[str, ...], int]]] = {}
-    raw: Dict[str, str] = {fp: read_file(Path(fp)) for fp in args.files}
-    for fp in args.files:
-        counter = build_counter(raw[fp], n_set)
-        ranked[fp] = top_items(counter, args.limit)
+    raw: Dict[str, str] = {str(fp): read_file(fp) for fp in [q_path] + known_files}
+    for fp in [q_path] + known_files:
+        counter = build_counter(raw[str(fp)], n_set)
+        ranked[str(fp)] = top_items(counter, args.limit)
 
-    q_file = args.files[0]
+    q_file = str(q_path)
 
-    if len(args.files) == 2:
-        a, b = args.files
-        det = incremental_overlap_detail(ranked[a], ranked[b], args.step, args.limit)
-        shared_map = {start: shared for start, _, shared in det}
-        print_ranking(a, ranked[a], shared_map, args.step)
-        print_ranking(b, ranked[b], shared_map, args.step)
-        print_overlap(a, b, det, args.step, args.limit)
-        return
-
-    # 3つ以上のファイルがあるとき：Qテキストとのみ比較
     totals = {}
     detail_maps = {}
-    for b in args.files[1:]:
-        det = incremental_overlap_detail(ranked[q_file], ranked[b], args.step, args.limit)
+    for b in known_files:
+        b_file = str(b)
+        det = incremental_overlap_detail(ranked[q_file], ranked[b_file], args.step, args.limit)
         total = sum(c for _, c, _ in det)
-        totals[(q_file, b)] = total
-        detail_maps[b] = {start: shared for start, _, shared in det}
+        totals[(q_file, b_file)] = total
+        detail_maps[b_file] = {start: shared for start, _, shared in det}
 
     print("\n=== Pairwise total shared n-grams with Q ===")
     for (a, b), t in totals.items():
-        print(f"{a} & {b}: {t}")
+        print(f"{Path(a).name} & {Path(b).name}: {t}")
     (best_a, best_b), best_val = max(totals.items(), key=lambda kv: kv[1])
-    print(f"\n>>> Best match: {best_a} & {best_b} (total {best_val})")
+    print(f"\n>>> Best match: {Path(best_a).name} & {Path(best_b).name} (total {best_val})")
 
-    for fp in args.files:
-        shared_map = detail_maps.get(fp, {}) if fp != q_file else {
-            start: shared for start, _, shared in incremental_overlap_detail(
-                ranked[q_file], ranked[best_b], args.step, args.limit
-            )
-        }
-
-        print_ranking(fp, ranked[fp], shared_map, args.step)
+    files_to_show = [best_a, best_b] if args.only_best else [str(q_path)] + [str(fp) for fp in known_files]
+    for fp in files_to_show:
+        shared_map = (
+            detail_maps.get(fp, {}) if fp != q_file else {
+                start: shared for start, _, shared in incremental_overlap_detail(
+                    ranked[q_file], ranked[best_b], args.step, args.limit
+                )
+            }
+        )
+        print_ranking(Path(fp).name, ranked[fp], shared_map, args.step)
 
     det_best = incremental_overlap_detail(ranked[best_a], ranked[best_b], args.step, args.limit)
-    print_overlap(best_a, best_b, det_best, args.step, args.limit)
+    print_overlap(Path(best_a).name, Path(best_b).name, det_best, args.step, args.limit)
+
 
 
 if __name__ == "__main__":
