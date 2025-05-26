@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>N‑Gram Comparer</title>
+    <title>N-Gram Comparer</title>
     <style>
       :root {
         --bg: #f7f7f8;
@@ -14,32 +14,27 @@
         --stripe: #d4d4d8;
         --match: #bbf7d0;
         --block: #2563eb;
+        --highlight: #fde2e2;
       }
-
       * {
         box-sizing: border-box;
       }
-
       body {
         margin: 0;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu,
-          sans-serif;
+        font-family: system-ui;
         background: var(--bg);
         color: var(--text);
       }
-
       h1 {
         text-align: center;
         margin: 1.5rem 0;
         font-size: 2rem;
       }
-
       .container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 1rem;
       }
-
       .card {
         background: var(--card);
         border: 1px solid var(--border);
@@ -48,21 +43,18 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         margin-bottom: 2rem;
       }
-
       .controls {
         display: flex;
         flex-wrap: wrap;
         gap: 1.25rem;
         align-items: flex-end;
       }
-
       label {
         font-size: 0.875rem;
         font-weight: 600;
         margin-bottom: 0.25rem;
         display: block;
       }
-
       input[type="number"],
       input[type="file"] {
         padding: 0.5rem 0.75rem;
@@ -70,7 +62,6 @@
         border-radius: 0.5rem;
         font-size: 1rem;
       }
-
       button {
         background: var(--accent);
         color: #fff;
@@ -81,28 +72,23 @@
         cursor: pointer;
         transition: background 0.2s;
       }
-
       button:hover {
         background: #1d4ed8;
       }
-
       button:disabled {
         background: #9ca3af;
         cursor: default;
       }
-
       .table-wrap {
         overflow: auto;
         border: 1px solid var(--border);
         height: 100vh;
       }
-
       table {
         border-collapse: collapse;
         min-width: 600px;
         width: max-content;
       }
-
       th,
       td {
         border: 1px solid var(--border);
@@ -110,7 +96,6 @@
         text-align: left;
         white-space: nowrap;
       }
-
       th {
         background: #f3f4f6;
         font-weight: 600;
@@ -118,7 +103,6 @@
         top: 0;
         z-index: 4;
       }
-
       .rank-sticky {
         position: sticky;
         left: 0;
@@ -128,14 +112,12 @@
         text-align: right;
         padding-right: 0.75rem;
       }
-
       th.rank-sticky {
         top: 0;
         left: 0;
         z-index: 7;
         background: #f3f4f6;
       }
-
       .base-sticky {
         position: sticky;
         left: 60px;
@@ -143,56 +125,53 @@
         background: #fff;
         min-width: 200px;
       }
-
       th.base-sticky {
         top: 0;
         background: #f3f4f6;
         z-index: 6;
       }
-
       .rank-strip {
         background: var(--stripe);
       }
-
       .match {
         background: var(--match) !important;
       }
-
       .block-top td,
       .block-top th {
         border-top: 3px solid var(--block);
       }
-
-      .shared-info {
-        margin-top: 1rem;
+      .block-summary {
+        background: #e5f7dc;
+      }
+      .highlight {
+        background: var(--highlight) !important;
       }
     </style>
   </head>
-
   <body>
-    <h1>N‑Gram Comparer</h1>
+    <h1>N-Gram Comparer</h1>
     <div class="container">
       <div class="card">
         <div class="controls">
           <div>
-            <label for="baseFile">Base file (single)</label>
-            <input id="baseFile" type="file" accept=".txt" />
+            <label for="baseFile">Base file (single)</label
+            ><input id="baseFile" type="file" accept=".txt" />
           </div>
           <div>
-            <label for="compareFiles">Compare files (multiple)</label>
-            <input id="compareFiles" type="file" multiple accept=".txt" />
+            <label for="compareFiles">Compare files (multiple)</label
+            ><input id="compareFiles" type="file" multiple accept=".txt" />
           </div>
           <div>
-            <label for="nval">n‑gram length</label>
-            <input id="nval" type="number" min="1" value="1" />
+            <label for="nval">n-gram length</label
+            ><input id="nval" type="number" min="1" value="1" />
           </div>
           <div>
-            <label for="limit">Top limit</label>
-            <input id="limit" type="number" min="1" value="200" />
+            <label for="limit">Top limit</label
+            ><input id="limit" type="number" min="1" value="200" />
           </div>
           <div>
-            <label for="blockSize">Block size</label>
-            <input id="blockSize" type="number" min="1" value="20" />
+            <label for="blockSize">Block size</label
+            ><input id="blockSize" type="number" min="1" value="20" />
           </div>
           <button id="analyse" disabled style="align-self: center">
             Analyse
@@ -201,14 +180,15 @@
       </div>
       <div id="output"></div>
     </div>
+
     <script>
       const WORD_RE = /\b\w+\b/g;
       const tokenize = (t) => t.toLowerCase().match(WORD_RE) || [];
       const makeNGrams = (tok, n) => {
-        const res = [];
+        const r = [];
         for (let i = 0; i <= tok.length - n; i++)
-          res.push(tok.slice(i, i + n).join(" "));
-        return res;
+          r.push(tok.slice(i, i + n).join(" "));
+        return r;
       };
       const buildCounter = (txt, n) => {
         const m = new Map();
@@ -217,20 +197,20 @@
         );
         return m;
       };
-      const topItems = (ctr, limit) =>
+      const topItems = (ctr, lim) =>
         Array.from(ctr.entries())
           .sort((a, b) => b[1] - a[1] || (a[0] > b[0] ? 1 : -1))
-          .slice(0, limit)
+          .slice(0, lim)
           .map((e) => e[0]);
 
       const els = {
-        base: baseFile,
-        cmp: compareFiles,
-        n: nval,
-        limit: limit,
-        blockSize: blockSize,
-        btn: analyse,
-        out: output,
+        base: document.getElementById("baseFile"),
+        cmp: document.getElementById("compareFiles"),
+        n: document.getElementById("nval"),
+        limit: document.getElementById("limit"),
+        blockSize: document.getElementById("blockSize"),
+        btn: document.getElementById("analyse"),
+        out: document.getElementById("output"),
       };
       let baseBlob = null,
         cmpBlobs = [];
@@ -250,12 +230,12 @@
         const n = parseInt(els.n.value) || 1,
           limit = parseInt(els.limit.value) || 200,
           STEP = parseInt(els.blockSize.value) || 20;
-
         const blobs = [baseBlob, ...cmpBlobs];
         const texts = await Promise.all(blobs.map((f) => f.text()));
         const ranks = texts.map((t) => topItems(buildCounter(t, n), limit));
-
         const blocks = Math.ceil(limit / STEP);
+
+        // 各ブロック共通n-gram集合
         const intersections = cmpBlobs.map(() =>
           Array.from({ length: blocks }, () => new Set())
         );
@@ -267,102 +247,83 @@
             });
           });
         }
+        // 各ブロック一致数
+        const blockSharedCounts = intersections.map((arr) =>
+          arr.map((s) => s.size)
+        );
 
+        // テーブル構築
         const wrap = document.createElement("div");
         wrap.className = "table-wrap";
         const tbl = document.createElement("table");
         wrap.appendChild(tbl);
-        const thead = tbl.createTHead();
-        const hr = thead.insertRow();
-        const thRank = hr.insertCell();
-        thRank.textContent = "Rank";
-        thRank.className = "rank-sticky";
+
+        // ヘッダー
+        const thead = tbl.createTHead().insertRow();
+        const thR = thead.insertCell();
+        thR.textContent = "Rank";
+        thR.className = "rank-sticky";
         blobs.forEach((f) => {
-          const th = document.createElement("th");
+          const th = thead.insertCell();
           th.textContent = f.name;
-          hr.appendChild(th);
         });
-        hr.children[1].classList.add("base-sticky");
+        thead.children[1].classList.add("base-sticky");
 
         const tbody = tbl.createTBody();
-        const sharedTotals = Array(cmpBlobs.length).fill(0);
-        for (let r = 0; r < limit; r++) {
-          const tr = tbody.insertRow();
-          if (r % STEP === 0) tr.classList.add("block-top");
-          const blk = Math.floor(r / STEP);
 
-          const rankTd = tr.insertCell();
-          rankTd.textContent = r + 1;
-          rankTd.className = "rank-sticky";
-          if (blk % 2 === 1) rankTd.classList.add("rank-strip");
-
-          const baseGram = ranks[0][r] || "";
-          const tdBase = tr.insertCell();
-          tdBase.textContent = baseGram;
-          tdBase.title = baseGram;
-          tdBase.className = "base-sticky truncate";
-          if (baseGram && intersections.some((arr) => arr[blk].has(baseGram)))
-            tdBase.classList.add("match");
-
-          cmpBlobs.forEach((b, idx) => {
-            const gram = ranks[idx + 1][r] || "";
-            const td = tr.insertCell();
-            td.textContent = gram;
-            td.title = gram;
-            td.className = "truncate";
-            if (gram && intersections[idx][blk].has(gram)) {
-              td.classList.add("match");
-              sharedTotals[idx]++;
-            }
+        // 各ブロックのデータ行＋サマリー行
+        for (let b = 0; b < blocks; b++) {
+          const start = b * STEP,
+            end = Math.min((b + 1) * STEP, limit);
+          // データ行
+          for (let r = start; r < end; r++) {
+            const tr = tbody.insertRow();
+            if (r % STEP === 0) tr.classList.add("block-top");
+            const blk = Math.floor(r / STEP);
+            const tdRank = tr.insertCell();
+            tdRank.textContent = r + 1;
+            tdRank.className = "rank-sticky";
+            if (blk % 2 === 1) tdRank.classList.add("rank-strip");
+            const baseGram = ranks[0][r] || "";
+            const tdBase = tr.insertCell();
+            tdBase.textContent = baseGram;
+            tdBase.title = baseGram;
+            tdBase.className = "base-sticky truncate";
+            if (baseGram && intersections.some((arr) => arr[blk].has(baseGram)))
+              tdBase.classList.add("match");
+            cmpBlobs.forEach((_, idx) => {
+              const gram = ranks[idx + 1][r] || "";
+              const td = tr.insertCell();
+              td.textContent = gram;
+              td.title = gram;
+              td.className = "truncate";
+              if (gram && intersections[idx][blk].has(gram))
+                td.classList.add("match");
+            });
+          }
+          // サマリー行
+          const summ = tbody.insertRow();
+          summ.className = "block-summary";
+          const tdLabel = summ.insertCell();
+          tdLabel.textContent = `${start + 1}–${end} shared`;
+          tdLabel.className = "rank-sticky";
+          const tdEmpty = summ.insertCell();
+          tdEmpty.className = "base-sticky";
+          // 各比較文書ごとに 一致数(累積) ＆ ハイライト判定
+          const cumulatives = blockSharedCounts.map((counts) =>
+            counts.slice(0, b + 1).reduce((a, c) => a + c, 0)
+          );
+          const maxCum = Math.max(...cumulatives);
+          blockSharedCounts.forEach((counts, idx) => {
+            const td = summ.insertCell();
+            const cum = cumulatives[idx],
+              cnt = counts[b];
+            td.textContent = `${cnt}(${cum})`;
+            if (cum === maxCum) td.classList.add("highlight");
           });
         }
 
         els.out.appendChild(wrap);
-        // 各ブロックごとの一致数表示
-        const blockInfo = document.createElement("div");
-        blockInfo.className = "shared-info";
-        const blockTable = document.createElement("table");
-
-        // テーブルヘッダー作成
-        const bthead = blockTable.createTHead().insertRow();
-        bthead.insertCell().textContent = "Block";
-        cmpBlobs.forEach((b) => {
-          const th = document.createElement("th");
-          th.textContent = b.name;
-          bthead.appendChild(th);
-        });
-
-        // テーブルボディ作成
-        const btbody = blockTable.createTBody();
-        for (let b = 0; b < blocks; b++) {
-          const tr = btbody.insertRow();
-          const rangeStart = b * STEP + 1;
-          const rangeEnd = Math.min((b + 1) * STEP, limit);
-          tr.insertCell().textContent = `Rank ${rangeStart}–${rangeEnd}`;
-          cmpBlobs.forEach((_, idx) => {
-            const td = tr.insertCell();
-            td.textContent = intersections[idx][b].size;
-          });
-        }
-
-        blockInfo.appendChild(document.createElement("hr"));
-        const title = document.createElement("h3");
-        title.textContent = "Matches per Block (Shared with Base)";
-        blockInfo.appendChild(title);
-        blockInfo.appendChild(blockTable);
-        els.out.appendChild(blockInfo);
-        // 合計行の追加
-        const totalRow = btbody.insertRow();
-        totalRow.style.fontWeight = "bold";
-        totalRow.insertCell().textContent = "Total";
-        cmpBlobs.forEach((_, idx) => {
-          let sum = 0;
-          for (let b = 0; b < blocks; b++) {
-            sum += intersections[idx][b].size;
-          }
-          const td = totalRow.insertCell();
-          td.textContent = sum;
-        });
       });
     </script>
   </body>
