@@ -7,10 +7,21 @@ You can use the python scripts and web apps in this repository to perform n-gram
 
 ## How to use
 
+Before you run the python script, you need to prepare the dataset you want to analyze.
+
 ### Python script
 
-Clone Repository
+Clone Repository & Run
 
-`git clone `
+```
+git clone git@github.com:shoji-pg-love/ELPy.git
+cd ELPy
+python3 Comparison.py -s {step} -m {limit} {dataset_dir} {unknown_txt}
+
+// input
+Analyse which n-gram length? (1=uni, 2=bi, 3=tri, etc.  Enter=1-3 all): 
+
+
+```
 
 ![webapp](https://github.com/user-attachments/assets/3a84627b-76c8-4990-9d7d-d0ffc512aff0)
