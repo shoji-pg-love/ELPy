@@ -24,4 +24,13 @@ Analyse which n-gram length? (1=uni, 2=bi, 3=tri, etc.  Enter=1-3 all):
 
 ```
 
+![sc](https://github.com/user-attachments/assets/ffd16846-01fe-46e3-a183-ea0b098271d1)
+
+If the analysis is successful, the results should be displayed in the terminal.
+
+
+### Web App
+
+You select the base file to be analyzed and the comparison file from the file picker on the web application. After setting the conditions of n-gram value, block width and ranking, press the [Analyze] button, and matching n-grams will be highlighted and displayed.
+
 ![webapp](https://github.com/user-attachments/assets/3a84627b-76c8-4990-9d7d-d0ffc512aff0)
