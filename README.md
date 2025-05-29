@@ -34,3 +34,7 @@ If the analysis is successful, the results should be displayed in the terminal.
 You select the base file to be analyzed and the comparison file from the file picker on the web application. After setting the conditions of n-gram value, block width and ranking, press the [Analyze] button, and matching n-grams will be highlighted and displayed.
 
 ![webapp](https://github.com/user-attachments/assets/3a84627b-76c8-4990-9d7d-d0ffc512aff0)
+
+## note
+
+We used generative AI tools to develop this app.
