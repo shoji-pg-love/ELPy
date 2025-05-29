@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>N-Gram Comparer</title>
+    <style>
+      :root {
+        --bg: #f7f7f8;
+        --card: #fff;
+        --border: #d1d5db;
+        --text: #111827;
+        --accent: #2563eb;
+        --stripe: #d4d4d8;
+        --match: #bbf7d0;
+        --block: #2563eb;
+        --highlight: #fde2e2;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui;
+        background: var(--bg);
+        color: var(--text);
+      }
+      h1 {
+        text-align: center;
+        margin: 1.5rem 0;
+        font-size: 2rem;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 2rem;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+        align-items: flex-end;
+      }
+      label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+      }
+      input[type="number"],
+      input[type="file"] {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        font-size: 1rem;
+      }
+      button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        padding: 0.6rem 1.25rem;
+        font-size: 1rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+      button:disabled {
+        background: #9ca3af;
+        cursor: default;
+      }
+
+      /* Tooltip */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        margin-left: 0.25rem;
+        cursor: help;
+        font-size: 0.75rem;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        border-radius: 50%;
+        width: 1rem;
+        height: 1rem;
+        text-align: center;
+        line-height: 1rem;
+      }
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 180px;
+        background-color: #111827;
+        color: #fff;
+        text-align: left;
+        border-radius: 6px;
+        padding: 0.5rem;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 0.75rem;
+      }
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      /* テーブル全体のスクロール設定 */
+      .table-wrap {
+        overflow-x: auto;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        max-height: 70vh;
+      }
+      table {
+        border-collapse: collapse;
+        table-layout: fixed;
+        min-width: 600px;
+        width: max-content;
+      }
+
+      /* すべてのヘッダーセルを固定 */
+      th {
+        position: sticky;
+        top: 0;
+        background: #f3f4f6;
+        z-index: 20;
+        border: 1px solid var(--border);
+        padding: 0.4rem 0.6rem;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      td {
+        border: 1px solid var(--border);
+        padding: 0.4rem 0.6rem;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* 左端の Rank 列 */
+      .rank-sticky {
+        position: sticky;
+        left: 0;
+        width: 60px;
+        min-width: 60px;
+        max-width: 60px;
+        text-align: right;
+        padding-right: 0.75rem;
+        background: #fff;
+        z-index: 25;
+      }
+      th.rank-sticky {
+        z-index: 30;
+      }
+
+      /* 2列目の Base 列 */
+      .base-sticky {
+        position: sticky;
+        left: 60px;
+        width: 200px;
+        min-width: 200px;
+        max-width: 200px;
+        background: #fff;
+        z-index: 22;
+      }
+      th.base-sticky {
+        z-index: 28;
+      }
+
+      /* ハイライト等 */
+      .rank-strip {
+        background: var(--stripe);
+      }
+      .match {
+        background: var(--match) !important;
+      }
+      .block-top td,
+      .block-top th {
+        border-top: 3px solid var(--block);
+      }
+      .block-summary {
+        background: #e5f7dc;
+      }
+      .highlight {
+        background: var(--highlight) !important;
+      }
+
+      /* レスポンシブ */
+      @media (max-width: 768px) {
+        .controls {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .table-wrap {
+          max-height: 60vh;
+        }
+        table {
+          font-size: 0.85rem;
+        }
+        input[type="number"],
+        input[type="file"],
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>N-Gram Comparer</h1>
+    <div class="container">
+      <div class="card">
+        <div class="controls">
+          <div>
+            <label for="baseFile">Base file (single)</label>
+            <input id="baseFile" type="file" accept=".txt" />
+          </div>
+          <div>
+            <label for="compareFiles">Compare files (multiple)</label>
+            <input id="compareFiles" type="file" multiple accept=".txt" />
+          </div>
+          <div>
+            <label for="nval">
+              n-gram length
+              <span class="tooltip"
+                >?
+                <span class="tooltiptext"
+                  >Specifies the length of the n-gram to be analyzed.<br />
+                  (e.g. unigram, bigram, trigram and more.)</span
+                >
+              </span>
+            </label>
+            <input id="nval" type="number" min="1" value="1" />
+          </div>
+          <div>
+            <label for="limit">
+              Top limit
+              <span class="tooltip"
+                >?
+                <span class="tooltiptext"
+                  >Determines how many matches are seen from first to last in
+                  the ranking of match words.</span
+                >
+              </span>
+            </label>
+            <input id="limit" type="number" min="1" value="200" />
+          </div>
+          <div>
+            <label for="blockSize">
+              Block size
+              <span class="tooltip"
+                >?
+                <span class="tooltiptext"
+                  >Decide how many steps to put in each step to determine the
+                  number of words to match. <br />
+                  (e.g., if you set it to 20, then [1st word in text A] = [21st
+                  word in text B]
+                  <b>will not count as a match word</b>).</span
+                >
+              </span>
+            </label>
+            <input id="blockSize" type="number" min="1" value="20" />
+          </div>
+          <button id="analyse" disabled>Analyse</button>
+        </div>
+      </div>
+      <div id="output"></div>
+    </div>
+
+    <script>
+      const WORD_RE = /\b\w+\b/g;
+      const tokenize = (t) => t.toLowerCase().match(WORD_RE) || [];
+      const makeNGrams = (tok, n) => {
+        const r = [];
+        for (let i = 0; i <= tok.length - n; i++)
+          r.push(tok.slice(i, i + n).join(" "));
+        return r;
+      };
+      const buildCounter = (txt, n) => {
+        const m = new Map();
+        makeNGrams(tokenize(txt), n).forEach((g) =>
+          m.set(g, (m.get(g) || 0) + 1)
+        );
+        return m;
+      };
+      const topItems = (ctr, lim) =>
+        Array.from(ctr.entries())
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, lim)
+          .map((e) => e[0]);
+
+      const els = {
+        base: document.getElementById("baseFile"),
+        cmp: document.getElementById("compareFiles"),
+        n: document.getElementById("nval"),
+        limit: document.getElementById("limit"),
+        blockSize: document.getElementById("blockSize"),
+        btn: document.getElementById("analyse"),
+        out: document.getElementById("output"),
+      };
+      let baseBlob = null,
+        cmpBlobs = [];
+      const toggleBtn = () =>
+        (els.btn.disabled = !baseBlob || cmpBlobs.length === 0);
+      els.base.addEventListener("change", (e) => {
+        baseBlob = e.target.files[0] || null;
+        toggleBtn();
+      });
+      els.cmp.addEventListener("change", (e) => {
+        cmpBlobs = [...e.target.files];
+        toggleBtn();
+      });
+
+      els.btn.addEventListener("click", async () => {
+        els.out.innerHTML = "";
+        const n = +els.n.value || 1,
+          limit = +els.limit.value || 200,
+          STEP = +els.blockSize.value || 20;
+        const blobs = [baseBlob, ...cmpBlobs];
+        const texts = await Promise.all(blobs.map((f) => f.text()));
+        const ranks = texts.map((t) => topItems(buildCounter(t, n), limit));
+        const blocks = Math.ceil(limit / STEP);
+
+        // 共通セット計算
+        const intersections = cmpBlobs.map(() =>
+          Array.from({ length: blocks }, () => new Set())
+        );
+        for (let b = 0; b < blocks; b++) {
+          const baseSet = new Set(ranks[0].slice(b * STEP, b * STEP + STEP));
+          cmpBlobs.forEach((_, idx) =>
+            ranks[idx + 1].slice(b * STEP, b * STEP + STEP).forEach((g) => {
+              if (baseSet.has(g)) intersections[idx][b].add(g);
+            })
+          );
+        }
+        const blockSharedCounts = intersections.map((arr) =>
+          arr.map((s) => s.size)
+        );
+
+        // テーブル組み立て
+        const wrap = document.createElement("div");
+        wrap.className = "table-wrap";
+        const tbl = document.createElement("table");
+        wrap.appendChild(tbl);
+
+        const thead = tbl.createTHead().insertRow();
+        const thR = thead.insertCell();
+        thR.textContent = "Rank";
+        thR.className = "rank-sticky";
+        blobs.forEach((f) => {
+          const th = thead.insertCell();
+          th.textContent = f.name;
+        });
+        thead.children[1].classList.add("base-sticky");
+
+        const tbody = tbl.createTBody();
+        for (let b = 0; b < blocks; b++) {
+          const start = b * STEP,
+            end = Math.min((b + 1) * STEP, limit);
+          for (let r = start; r < end; r++) {
+            const tr = tbody.insertRow();
+            if (r % STEP === 0) tr.classList.add("block-top");
+            const blk = Math.floor(r / STEP);
+
+            const tdRank = tr.insertCell();
+            tdRank.textContent = r + 1;
+            tdRank.className = "rank-sticky";
+            if (blk % 2) tdRank.classList.add("rank-strip");
+
+            const baseGram = ranks[0][r] || "";
+            const tdBase = tr.insertCell();
+            tdBase.textContent = baseGram;
+            tdBase.title = baseGram;
+            tdBase.className = "base-sticky";
+            if (baseGram && intersections.some((arr) => arr[blk].has(baseGram)))
+              tdBase.classList.add("match");
+
+            cmpBlobs.forEach((_, idx) => {
+              const gram = ranks[idx + 1][r] || "";
+              const td = tr.insertCell();
+              td.textContent = gram;
+              td.title = gram;
+              if (gram && intersections[idx][blk].has(gram))
+                td.classList.add("match");
+            });
+          }
+          // サマリー行
+          const summ = tbody.insertRow();
+          summ.className = "block-summary";
+          const tdLabel = summ.insertCell();
+          tdLabel.textContent = `${start + 1}–${end} shared`;
+          tdLabel.className = "rank-sticky";
+          const tdEmpty = summ.insertCell();
+          tdEmpty.className = "base-sticky";
+
+          const cumulatives = blockSharedCounts.map((cnts) =>
+            cnts.slice(0, b + 1).reduce((a, c) => a + c, 0)
+          );
+          const maxCum = Math.max(...cumulatives);
+          blockSharedCounts.forEach((cnts, idx) => {
+            const td = summ.insertCell();
+            const cnt = cnts[b],
+              cum = cumulatives[idx];
+            td.textContent = `${cnt}(${cum})`;
+            if (cum === maxCum) td.classList.add("highlight");
+          });
+        }
+
+        els.out.appendChild(wrap);
+      });
+    </script>
+  </body>
+</html>
