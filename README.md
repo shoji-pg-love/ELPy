@@ -35,6 +35,23 @@ You select the base file to be analyzed and the comparison file from the file pi
 
 ![webapp](https://github.com/user-attachments/assets/3a84627b-76c8-4990-9d7d-d0ffc512aff0)
 
-## note
 
+## how to use KWICs
+#### 1_1
+(e.g.) python kwic.py <filename> <target>
+```python KWIC1_1.py sample.txt "climate change"```
+
+#### 1_2
+(e.g.)python KWIC1_2.py <filename> <type> <target>
+```
+python KWIC1_2.py sample.txt token "climate"
+python KWIC1_2.py sample.txt pos "ADJ NOUN"
+python KWIC1_2.py sample.txt ent "PERSON"
+```
+
+#### 2_1
+same as 1_2
+
+  
+# note
 We used generative AI tools to develop this app.
