@@ -14,9 +14,9 @@ Before you run the python script, you need to prepare the dataset you want to an
 Clone Repository & Run
 
 ```
-git clone git@github.com:shoji-pg-love/ELPy.git
-cd ELPy
-python3 Comparison.py -s {step} -m {limit} {dataset_dir} {unknown_txt}
+$ git clone git@github.com:shoji-pg-love/ELPy.git
+$ cd ELPy
+$ python3 Comparison.py -s {step} -m {limit} {dataset_dir} {unknown_txt}
 
 // input
 Analyse which n-gram length? (1=uni, 2=bi, 3=tri, etc.  Enter=1-3 all): 
