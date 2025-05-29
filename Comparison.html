@@ -6,18 +6,18 @@
     <title>N-Gram Comparer</title>
     <style>
       :root {
-        --bg: #f7f7f8;
-        --card: #fff;
-        --border: #d1d5db;
-        --text: #111827;
-        --accent: #2563eb;
-        --stripe: #d4d4d8;
-        --match: #bbf7d0;
-        --block: #2563eb;
-        --highlight: #fde2e2;
+        --bg: #f7f7f8; /* 背景色 */
+        --card: #fff; /* カード背景色 */
+        --border: #d1d5db; /* ボーダー色 */
+        --text: #111827; /* 文字色 */
+        --accent: #2563eb; /* アクセントカラー（ボタンやツールチップなど） */
+        --stripe: #d4d4d8; /* 交互ストライプの背景色 */
+        --match: #bbf7d0; /* マッチ部分の背景色 */
+        --block: #2563eb; /* ブロックの区切り線の色 */
+        --highlight: #fde2e2; /* ハイライトの背景色 */
       }
       * {
-        box-sizing: border-box;
+        box-sizing: border-box; /* パディングやボーダーを含めたサイズ計算 */
       }
       body {
         margin: 0;
@@ -45,9 +45,9 @@
       }
       .controls {
         display: flex;
-        flex-wrap: wrap;
-        gap: 1.25rem;
-        align-items: flex-end;
+        flex-wrap: wrap; /* 画面が狭いときに折り返す */
+        gap: 1.25rem; /* 要素間の隙間 */
+        align-items: flex-end; /* ラベルと入力を下揃え */
       }
       label {
         font-size: 0.875rem;
@@ -74,14 +74,14 @@
         transition: background 0.2s;
       }
       button:hover {
-        background: #1d4ed8;
+        background: #1d4ed8; /* ホバー時の色 */
       }
       button:disabled {
         background: #9ca3af;
         cursor: default;
       }
 
-      /* Tooltip */
+      /* ツールチップ */
       .tooltip {
         position: relative;
         display: inline-block;
@@ -97,7 +97,7 @@
         line-height: 1rem;
       }
       .tooltip .tooltiptext {
-        visibility: hidden;
+        visibility: hidden; /* 初期状態は非表示 */
         width: 180px;
         background-color: #111827;
         color: #fff;
@@ -106,36 +106,36 @@
         padding: 0.5rem;
         position: absolute;
         z-index: 1;
-        bottom: 125%;
+        bottom: 125%; /* アイコンの上に表示 */
         left: 50%;
         transform: translateX(-50%);
-        opacity: 0;
+        opacity: 0; /* フェードアウト状態 */
         transition: opacity 0.3s;
         font-size: 0.75rem;
       }
       .tooltip:hover .tooltiptext {
-        visibility: visible;
-        opacity: 1;
+        visibility: visible; /* ホバー時に表示 */
+        opacity: 1; /* フェードイン */
       }
 
-      /* テーブル全体のスクロール設定 */
+      /* テーブルのスクロール設定（横も縦もスクロール可能） */
       .table-wrap {
         overflow-x: auto;
         overflow-y: auto;
         border: 1px solid var(--border);
-        max-height: 70vh;
+        max-height: 70vh; /* 最大高さ指定 */
       }
       table {
         border-collapse: collapse;
-        table-layout: fixed;
-        min-width: 600px;
-        width: max-content;
+        table-layout: fixed; /* 固定レイアウト */
+        min-width: 600px; /* 最小幅確保 */
+        width: max-content; /* コンテンツ幅に合わせる */
       }
 
-      /* すべてのヘッダーセルを固定 */
+      /* ヘッダーセルの固定 */
       th {
         position: sticky;
-        top: 0;
+        top: 0; /* ヘッダーをスクロール時に画面上部に固定 */
         background: #f3f4f6;
         z-index: 20;
         border: 1px solid var(--border);
@@ -154,7 +154,7 @@
         text-overflow: ellipsis;
       }
 
-      /* 左端の Rank 列 */
+      /* 左端の Rank 列を固定 */
       .rank-sticky {
         position: sticky;
         left: 0;
@@ -167,10 +167,10 @@
         z-index: 25;
       }
       th.rank-sticky {
-        z-index: 30;
+        z-index: 30; /* ヘッダーRankセルはさらに前面 */
       }
 
-      /* 2列目の Base 列 */
+      /* 2列目の Base 列も固定 */
       .base-sticky {
         position: sticky;
         left: 60px;
@@ -184,32 +184,36 @@
         z-index: 28;
       }
 
-      /* ハイライト等 */
+      /* 交互ストライプの背景色 */
       .rank-strip {
         background: var(--stripe);
       }
+      /* マッチしたセルの背景色 */
       .match {
         background: var(--match) !important;
       }
+      /* ブロック上部の太線 */
       .block-top td,
       .block-top th {
         border-top: 3px solid var(--block);
       }
+      /* ブロックの集計行の背景色 */
       .block-summary {
         background: #e5f7dc;
       }
+      /* 強調表示用の背景色 */
       .highlight {
         background: var(--highlight) !important;
       }
 
-      /* レスポンシブ */
+      /* レスポンシブ対応 */
       @media (max-width: 768px) {
         .controls {
-          flex-direction: column;
+          flex-direction: column; /* コントロールを縦並びに */
           align-items: stretch;
         }
         .table-wrap {
-          max-height: 60vh;
+          max-height: 60vh; /* スクロール領域の高さを少し小さく */
         }
         table {
           font-size: 0.85rem;
@@ -217,7 +221,7 @@
         input[type="number"],
         input[type="file"],
         button {
-          width: 100%;
+          width: 100%; /* 幅を100%に */
         }
       }
     </style>
@@ -284,14 +288,21 @@
     </div>
 
     <script>
+      // 単語の正規表現（単語境界に囲まれた単語文字）
       const WORD_RE = /\b\w+\b/g;
+
+      // テキストを単語に分割して配列として返す（小文字に変換）
       const tokenize = (t) => t.toLowerCase().match(WORD_RE) || [];
+
+      // トークン配列からn-gramの配列を生成
       const makeNGrams = (tok, n) => {
         const r = [];
         for (let i = 0; i <= tok.length - n; i++)
           r.push(tok.slice(i, i + n).join(" "));
         return r;
       };
+
+      // テキストからn-gramの出現頻度をMapとして構築
       const buildCounter = (txt, n) => {
         const m = new Map();
         makeNGrams(tokenize(txt), n).forEach((g) =>
@@ -299,12 +310,15 @@
         );
         return m;
       };
+
+      // Mapから頻度順に並べ替え、上位limit個のn-gramを抽出
       const topItems = (ctr, lim) =>
         Array.from(ctr.entries())
           .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
           .slice(0, lim)
           .map((e) => e[0]);
 
+      // 各種HTML要素への参照を取得
       const els = {
         base: document.getElementById("baseFile"),
         cmp: document.getElementById("compareFiles"),
@@ -314,33 +328,44 @@
         btn: document.getElementById("analyse"),
         out: document.getElementById("output"),
       };
+
       let baseBlob = null,
         cmpBlobs = [];
+
+      // ボタンの有効/無効を切り替え（入力が揃ったときのみ有効）
       const toggleBtn = () =>
         (els.btn.disabled = !baseBlob || cmpBlobs.length === 0);
+
+      // 基準ファイルが選ばれたときの処理
       els.base.addEventListener("change", (e) => {
         baseBlob = e.target.files[0] || null;
         toggleBtn();
       });
+
+      // 比較ファイル群が選ばれたときの処理
       els.cmp.addEventListener("change", (e) => {
         cmpBlobs = [...e.target.files];
         toggleBtn();
       });
 
+      // 解析ボタンが押されたときの処理
       els.btn.addEventListener("click", async () => {
-        els.out.innerHTML = "";
-        const n = +els.n.value || 1,
-          limit = +els.limit.value || 200,
-          STEP = +els.blockSize.value || 20;
-        const blobs = [baseBlob, ...cmpBlobs];
-        const texts = await Promise.all(blobs.map((f) => f.text()));
-        const ranks = texts.map((t) => topItems(buildCounter(t, n), limit));
-        const blocks = Math.ceil(limit / STEP);
+        els.out.innerHTML = ""; // 出力エリア初期化
+        const n = +els.n.value || 1, // n-gramのn
+          limit = +els.limit.value || 200, // ランキング上限
+          STEP = +els.blockSize.value || 20; // ブロックサイズ
 
-        // 共通セット計算
+        const blobs = [baseBlob, ...cmpBlobs];
+        const texts = await Promise.all(blobs.map((f) => f.text())); // 各ファイルをテキストとして読み込む
+        const ranks = texts.map((t) => topItems(buildCounter(t, n), limit)); // 各テキストのn-gram上位リストを取得
+        const blocks = Math.ceil(limit / STEP); // ブロック数（例：200/20=10）
+
+        // 比較ファイルごとのブロックごとの共通n-gramセットを初期化
         const intersections = cmpBlobs.map(() =>
           Array.from({ length: blocks }, () => new Set())
         );
+
+        // ブロックごとに基準ファイルと比較ファイルの共通n-gramを判定
         for (let b = 0; b < blocks; b++) {
           const baseSet = new Set(ranks[0].slice(b * STEP, b * STEP + STEP));
           cmpBlobs.forEach((_, idx) =>
@@ -349,16 +374,19 @@
             })
           );
         }
+
+        // 各比較ファイルのブロックごとの共通語数を記録
         const blockSharedCounts = intersections.map((arr) =>
           arr.map((s) => s.size)
         );
 
-        // テーブル組み立て
+        // テーブル構築開始
         const wrap = document.createElement("div");
         wrap.className = "table-wrap";
         const tbl = document.createElement("table");
         wrap.appendChild(tbl);
 
+        // テーブルヘッダー作成
         const thead = tbl.createTHead().insertRow();
         const thR = thead.insertCell();
         thR.textContent = "Rank";
@@ -369,6 +397,7 @@
         });
         thead.children[1].classList.add("base-sticky");
 
+        // テーブル本文作成
         const tbody = tbl.createTBody();
         for (let b = 0; b < blocks; b++) {
           const start = b * STEP,
@@ -378,11 +407,13 @@
             if (r % STEP === 0) tr.classList.add("block-top");
             const blk = Math.floor(r / STEP);
 
+            // ランク列
             const tdRank = tr.insertCell();
             tdRank.textContent = r + 1;
             tdRank.className = "rank-sticky";
             if (blk % 2) tdRank.classList.add("rank-strip");
 
+            // 基準ファイルのn-gram表示
             const baseGram = ranks[0][r] || "";
             const tdBase = tr.insertCell();
             tdBase.textContent = baseGram;
@@ -391,6 +422,7 @@
             if (baseGram && intersections.some((arr) => arr[blk].has(baseGram)))
               tdBase.classList.add("match");
 
+            // 各比較ファイルのn-gram表示
             cmpBlobs.forEach((_, idx) => {
               const gram = ranks[idx + 1][r] || "";
               const td = tr.insertCell();
@@ -400,7 +432,8 @@
                 td.classList.add("match");
             });
           }
-          // サマリー行
+
+          // ブロックの集計行を追加
           const summ = tbody.insertRow();
           summ.className = "block-summary";
           const tdLabel = summ.insertCell();
@@ -409,6 +442,7 @@
           const tdEmpty = summ.insertCell();
           tdEmpty.className = "base-sticky";
 
+          // 各比較ファイルの共通数と累積数を表示
           const cumulatives = blockSharedCounts.map((cnts) =>
             cnts.slice(0, b + 1).reduce((a, c) => a + c, 0)
           );
@@ -422,6 +456,7 @@
           });
         }
 
+        // 結果を出力エリアに追加
         els.out.appendChild(wrap);
       });
     </script>
