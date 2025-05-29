@@ -14,9 +14,9 @@ Before you run the python script, you need to prepare the dataset you want to an
 Clone Repository & Run
 
 ```
-git clone git@github.com:shoji-pg-love/ELPy.git
-cd ELPy
-python3 Comparison.py -s {step} -m {limit} {dataset_dir} {unknown_txt}
+$ git clone git@github.com:shoji-pg-love/ELPy.git
+$ cd ELPy
+$ python3 Comparison.py -s {step} -m {limit} {dataset_dir} {unknown_txt}
 
 // input
 Analyse which n-gram length? (1=uni, 2=bi, 3=tri, etc.  Enter=1-3 all): 
@@ -35,6 +35,7 @@ You select the base file to be analyzed and the comparison file from the file pi
 
 ![webapp](https://github.com/user-attachments/assets/3a84627b-76c8-4990-9d7d-d0ffc512aff0)
 
+
 ## how to use KWICs
 #### 1_1
 (e.g.) python kwic.py <filename> <target>
@@ -50,3 +51,7 @@ python KWIC1_2.py sample.txt ent "PERSON"
 
 #### 2_1
 same as 1_2
+
+  
+# note
+We used generative AI tools to develop this app.
