@@ -2,6 +2,8 @@
 <img src="https://img.shields.io/badge/-Python-F9DC3E.svg?logo=python&style=flat">
 <img src="https://img.shields.io/badge/-Python-F9DC3E.svg?logo=python&style=flat"> 
 
+[![GitHub Pages](https://img.shields.io/static/v1?label=GitHub+Pages&message=+&color=brightgreen&logo=github)](https://shoji-pg-love.github.io/ELPy/) 
+
 ## Feature
 You can use the python scripts and web apps in this repository to perform n-gram searches and analyze author features.
 
