@@ -53,7 +53,8 @@
         font-size: 0.875rem;
         font-weight: 600;
         margin-bottom: 0.25rem;
-        display: block;
+        display: flex;
+        align-items: center;
       }
       input[type="number"],
       input[type="file"] {
@@ -78,6 +79,43 @@
       button:disabled {
         background: #9ca3af;
         cursor: default;
+      }
+
+      /* Tooltip */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        margin-left: 0.25rem;
+        cursor: help;
+        font-size: 0.75rem;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        border-radius: 50%;
+        width: 1rem;
+        height: 1rem;
+        text-align: center;
+        line-height: 1rem;
+      }
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 180px;
+        background-color: #111827;
+        color: #fff;
+        text-align: left;
+        border-radius: 6px;
+        padding: 0.5rem;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 0.75rem;
+      }
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
       }
 
       /* テーブル全体のスクロール設定 */
@@ -198,15 +236,45 @@
             <input id="compareFiles" type="file" multiple accept=".txt" />
           </div>
           <div>
-            <label for="nval">n-gram length</label>
+            <label for="nval">
+              n-gram length
+              <span class="tooltip"
+                >?
+                <span class="tooltiptext"
+                  >Specifies the length of the n-gram to be analyzed.<br />
+                  (e.g. unigram, bigram, trigram and more.)</span
+                >
+              </span>
+            </label>
             <input id="nval" type="number" min="1" value="1" />
           </div>
           <div>
-            <label for="limit">Top limit</label>
+            <label for="limit">
+              Top limit
+              <span class="tooltip"
+                >?
+                <span class="tooltiptext"
+                  >Determines how many matches are seen from first to last in
+                  the ranking of match words.</span
+                >
+              </span>
+            </label>
             <input id="limit" type="number" min="1" value="200" />
           </div>
           <div>
-            <label for="blockSize">Block size</label>
+            <label for="blockSize">
+              Block size
+              <span class="tooltip"
+                >?
+                <span class="tooltiptext"
+                  >Decide how many steps to put in each step to determine the
+                  number of words to match. <br />
+                  (e.g., if you set it to 20, then [1st word in text A] = [21st
+                  word in text B]
+                  <b>will not count as a match word</b>).</span
+                >
+              </span>
+            </label>
             <input id="blockSize" type="number" min="1" value="20" />
           </div>
           <button id="analyse" disabled>Analyse</button>
@@ -269,7 +337,7 @@
         const ranks = texts.map((t) => topItems(buildCounter(t, n), limit));
         const blocks = Math.ceil(limit / STEP);
 
-        // ブロックごとの共通セット
+        // 共通セット計算
         const intersections = cmpBlobs.map(() =>
           Array.from({ length: blocks }, () => new Set())
         );
@@ -332,7 +400,7 @@
                 td.classList.add("match");
             });
           }
-          // サマリー
+          // サマリー行
           const summ = tbody.insertRow();
           summ.className = "block-summary";
           const tdLabel = summ.insertCell();
